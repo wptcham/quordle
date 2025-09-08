@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Mini Quordle – 4 Words, 10 Guesses</title>
+  <title>Mini Quordle – 4 Words, 9 Guesses</title>
   <style>
     :root{
       --bg:#0f172a;           /* slate-900 */
@@ -146,7 +146,7 @@
     </header>
 
     <div class="hud">
-      <div class="badge" id="guessesLeft">Guesses left: 10</div>
+      <div class="badge" id="guessesLeft">Guesses left: 9</div>
       <div class="badge">Targets: 4 × 5-letter words</div>
       <div class="badge">Type or click keys</div>
       <div class="msg" id="message" role="status" aria-live="polite"></div>
@@ -165,7 +165,7 @@
     (() => {
       // === Configuration ===
       const ANSWERS = ["cutie","chart","human","flesh"]; // four fixed targets
-      const MAX_GUESSES = 10;
+      const MAX_GUESSES = 9;
       const WORD_LEN = 5;
 
       // === DOM refs ===
@@ -419,7 +419,7 @@
       updateGuessesLeft();
       drawBoards();
       drawKeyboard();
-      setMessage('Guess the four words in 10 tries.');
+      setMessage('Guess the four words in 9 tries.');
     })();
   </script>
 </body>
