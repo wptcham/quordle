@@ -320,36 +320,45 @@ button[type="submit"]:hover {
   }
 
   function drawBoards() {
-    boardsEl.innerHTML = '';
-    ANSWERS.forEach((_, idx) => {
-      const board = el('div', 'board');
-      const title = el('h2', null, `Word ${idx + 1}`);
-      const solvedTag = el('span', 'badge', solved[idx] ? 'Solved' : 'Unsolved');
-      title.appendChild(solvedTag);
-      board.appendChild(title);
+  boardsEl.innerHTML = '';
+  ANSWERS.forEach((_, idx) => {
+    const board = el('div', 'board');
+    const title = el('h2', null, `Word ${idx + 1}`);
+    const solvedTag = el('span', 'badge', solved[idx] ? 'Solved' : 'Unsolved');
+    title.appendChild(solvedTag);
+    board.appendChild(title);
 
-      const grid = el('div', 'grid');
-      for (let r = 0; r < MAX_GUESSES; r++) {
-        const row = el('div', 'row');
-        const guess = guesses[r] || (r === guesses.length ? currentGuess : "");
-        for (let c = 0; c < WORD_LEN; c++) {
-          const t = el('div', 'tile');
-          const ch = guess[c] || '';
-          if (ch) t.classList.add('filled');
-          t.textContent = ch || '';
-          // Reveal coloring if this row is a submitted guess
-          if (guesses[r]) {
-            const evaln = evaluate(guesses[r], ANSWERS[idx]);
-            t.classList.add('reveal', evaln[c]);
-          }
-          row.appendChild(t);
-        }
-        grid.appendChild(row);
+    const grid = el('div', 'grid');
+    for (let r = 0; r < MAX_GUESSES; r++) {
+      const row = el('div', 'row');
+
+      // ⬇️ Only show guesses if the word isn’t solved
+      let guess = "";
+      if (!solved[idx]) {
+        guess = guesses[r] || (r === guesses.length ? currentGuess : "");
+      } else {
+        // If solved, only show guesses up to the solving guess
+        if (guesses[r]) guess = guesses[r];
       }
-      board.appendChild(grid);
-      boardsEl.appendChild(board);
-    });
-  }
+
+      for (let c = 0; c < WORD_LEN; c++) {
+        const t = el('div', 'tile');
+        const ch = guess[c] || '';
+        if (ch) t.classList.add('filled');
+        t.textContent = ch || '';
+
+        if (guesses[r]) {
+          const evaln = evaluate(guesses[r], ANSWERS[idx]);
+          t.classList.add('reveal', evaln[c]);
+        }
+        row.appendChild(t);
+      }
+      grid.appendChild(row);
+    }
+    board.appendChild(grid);
+    boardsEl.appendChild(board);
+  });
+}
 
   function drawKeyboard() {
     keyboardEl.innerHTML = '';
