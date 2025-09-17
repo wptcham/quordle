@@ -343,12 +343,13 @@ button[type="submit"]:hover {
       const row = el('div', 'row');
 
       let guess = "";
-if (!solved[idx] || r < solvedAtGuess[idx]) {
+if (!solved[idx] || r <= solvedAtGuess[idx]) {
+  // show all guesses up to and including the guess that solved this board
   guess = guesses[r] || (r === guesses.length ? currentGuess : "");
 } else {
-  guess = guesses[solvedAtGuess[idx]]; // freeze at the last guess that solved it
+  // freeze at the solved guess
+  guess = guesses[solvedAtGuess[idx]];
 }
-
       for (let c = 0; c < WORD_LEN; c++) {
         const t = el('div', 'tile');
         const ch = guess[c] || '';
