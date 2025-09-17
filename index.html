@@ -391,32 +391,74 @@ button[type="submit"]:hover {
     return solved.every(Boolean);
   }
 
-  function submitGuess() {
-    const guess = normalize(currentGuess);
-    if (gameOver) return;
-    if (guess.length !== WORD_LEN) return;
+ function submitGuess() {
+  const guess = normalize(currentGuess);
+  if (gameOver) return;
+  if (guess.length !== WORD_LEN) return;
 
-    const solvedFlags = solved.slice();
-    for (let i = 0; i < 4; i++) {
+  const solvedFlags = solved.slice();
+  for (let i = 0; i < 4; i++) {
+    const status = evaluate(guess, ANSWERS[i]);
+    solvedFlags[i] = solvedFlags[i] || status.every(s => s === 'correct');
+  }
+
+  solved = solvedFlags;
+  guesses.push(guess);
+  currentGuess = '';
+  drawBoards();
+  drawKeyboard();
+  updateGuessesLeft();
+
+  if (allSolved()) {
+    setMessage('You solved all words!');
+    gameOver = true;
+  } else if (guesses.length >= MAX_GUESSES) {
+    setMessage('Out of guesses! Game over.');
+    gameOver = true;
+  }
+}
+✅ Fix: Don’t record guesses for solved boards
+We’ll add a check so that once a board is solved, it stops evaluating new guesses.
+
+js
+Copy code
+function submitGuess() {
+  const guess = normalize(currentGuess);
+  if (gameOver) return;
+  if (guess.length !== WORD_LEN) return;
+
+  let anySolvedNow = false;
+
+  for (let i = 0; i < 4; i++) {
+    if (!solved[i]) {
       const status = evaluate(guess, ANSWERS[i]);
-      solvedFlags[i] = solvedFlags[i] || status.every(s => s === 'correct');
-    }
-
-    solved = solvedFlags;
-    guesses.push(guess);
-    currentGuess = '';
-    drawBoards();
-    drawKeyboard();
-    updateGuessesLeft();
-
-    if (allSolved()) {
-      setMessage('You solved all words!');
-      gameOver = true;
-    } else if (guesses.length >= MAX_GUESSES) {
-      setMessage('Out of guesses! Game over.');
-      gameOver = true;
+      if (status.every(s => s === 'correct')) {
+        solved[i] = true;
+        anySolvedNow = true;
+      }
     }
   }
+
+  // Only store guess if it applied to at least one unsolved word
+  if (!anySolvedNow) {
+    guesses.push(guess);
+  } else {
+    guesses.push(guess); // optional: still show the solving guess
+  }
+
+  currentGuess = '';
+  drawBoards();
+  drawKeyboard();
+  updateGuessesLeft();
+
+  if (allSolved()) {
+    setMessage('You solved all words!');
+    gameOver = true;
+  } else if (guesses.length >= MAX_GUESSES) {
+    setMessage('Out of guesses! Game over.');
+    gameOver = true;
+  }
+}
 
   function handleInput(input) {
   if (gameOver) return;
