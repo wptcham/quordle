@@ -343,13 +343,10 @@ button[type="submit"]:hover {
       const row = el('div', 'row');
 
       let guess = "";
-if (!solved[idx]) {
+if (!solved[idx] || r < solvedAtGuess[idx]) {
   guess = guesses[r] || (r === guesses.length ? currentGuess : "");
 } else {
-  // freeze at the point it was solved
-  if (r < solvedAtGuess[idx]) {
-    guess = guesses[r];
-  }
+  guess = guesses[solvedAtGuess[idx]]; // freeze at the last guess that solved it
 }
 
       for (let c = 0; c < WORD_LEN; c++) {
