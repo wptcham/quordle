@@ -412,7 +412,9 @@ button[type="submit"]:hover {
   function handleInput(input) {
     if (gameOver) return;
     if (input === 'Enter') return submitGuess();
-    if (input === '⌫') return currentGuess = currentGuess.slice(0, -1);
+    if (input === 'Backspace') {
+      currentGuess = currentGuess.slice(0, -1);
+      drawBoards();
     if (currentGuess.length < WORD_LEN) {
       currentGuess += input;
     }
@@ -443,6 +445,13 @@ button[type="submit"]:hover {
     gameOver = false;
     startScreenEl.style.display = 'flex';
     messageEl.textContent = '';
+   });
+
+  // === Physical Keyboard Support ===
+  document.addEventListener('keydown', (e) => {
+    if (/^[a-zA-Z]$/.test(e.key)) handleInput(e.key.toLowerCase());
+    if (e.key === 'Enter') handleInput('Enter');
+    if (e.key === 'Backspace') handleInput('Backspace');
   });
 
   // Initially, show the start screen
