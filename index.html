@@ -428,21 +428,32 @@ button[type="submit"]:hover {
   drawKeyboard();
 }
 
-  // === Start Screen ===
-  wordForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const words = wordInputs.map(input => normalize(input.value));
-    if (words.length === 4 && words.every(word => word.length === WORD_LEN)) {
-      ANSWERS = words;
-      startScreenEl.style.display = 'none';
-      drawBoards();
-      drawKeyboard();
-      setMessage('Game started!');
-    } else {
-      setMessage('Please enter valid 5-letter words!', 'error');
-    }
-  });
+// === Start Screen ===
+wordForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const words = wordInputs.map(input => normalize(input.value));
 
+  if (words.length === 4 && words.every(word => word.length === WORD_LEN)) {
+    // Reset state
+    ANSWERS = words;
+    solved = [false, false, false, false];
+    guesses = [];
+    currentGuess = '';
+    gameOver = false;
+    Object.keys(keyStatus).forEach(k => delete keyStatus[k]);
+
+    // Hide start screen, show game
+    startScreenEl.style.display = 'none';
+    messageEl.textContent = '';
+    updateGuessesLeft();
+    drawBoards();
+    drawKeyboard();
+    setMessage('Game started!');
+  } else {
+    setMessage('Please enter valid 5-letter words!', 'error');
+  }
+});
+      
   // === New Game ===
   newGameBtn.addEventListener('click', () => {
     solved = [false, false, false, false];
