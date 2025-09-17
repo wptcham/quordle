@@ -134,9 +134,74 @@
     @media (max-width: 560px){
       .boards{ grid-template-columns: 1fr; }
     }
+    .start-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  background-color: var(--bg);
+  color: var(--fg);
+  width: 100%;
+  height: 100vh;
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 10;
+}
+
+.input-group {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+input[type="text"] {
+  width: 60px;
+  padding: 10px;
+  text-align: center;
+  font-size: 18px;
+  border: 1px solid var(--tile-border);
+  border-radius: var(--radius);
+  background-color: var(--tile);
+  color: var(--fg);
+}
+
+input[type="text"]:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+button[type="submit"] {
+  padding: 12px 20px;
+  background-color: var(--accent);
+  border: none;
+  color: var(--fg);
+  font-weight: bold;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: 16px;
+}
+
+button[type="submit"]:hover {
+  background-color: var(--fg);
+  color: var(--bg);
+}
   </style>
 </head>
 <body>
+  <div class="start-screen" id="startScreen">
+  <h2>Enter 4 words to guess</h2>
+  <form id="wordForm">
+    <div class="input-group">
+      <input type="text" id="word1" maxlength="5" placeholder="Word 1" required>
+      <input type="text" id="word2" maxlength="5" placeholder="Word 2" required>
+      <input type="text" id="word3" maxlength="5" placeholder="Word 3" required>
+      <input type="text" id="word4" maxlength="5" placeholder="Word 4" required>
+    </div>
+    <button type="submit" class="btn">Start Game</button>
+  </form>
+  </div>  
   <div class="app" id="app">
     <header>
       <h1>Mini Quordle</h1>
@@ -163,264 +228,226 @@
 
   <script>
     (() => {
-      // === Configuration ===
-      const ANSWERS = ["cutie","chart","human","flesh"]; // four fixed targets
-      const MAX_GUESSES = 9;
-      const WORD_LEN = 5;
+  // === Configuration ===
+  const MAX_GUESSES = 9;
+  const WORD_LEN = 5;
 
-      // === DOM refs ===
-      const boardsEl = document.getElementById('boards');
-      const keyboardEl = document.getElementById('keyboard');
-      const guessesLeftEl = document.getElementById('guessesLeft');
-      const messageEl = document.getElementById('message');
-      const newGameBtn = document.getElementById('newGameBtn');
+  // === DOM refs ===
+  const startScreenEl = document.getElementById('startScreen');
+  const boardsEl = document.getElementById('boards');
+  const keyboardEl = document.getElementById('keyboard');
+  const guessesLeftEl = document.getElementById('guessesLeft');
+  const messageEl = document.getElementById('message');
+  const newGameBtn = document.getElementById('newGameBtn');
+  const wordForm = document.getElementById('wordForm');
+  const wordInputs = [
+    document.getElementById('word1'),
+    document.getElementById('word2'),
+    document.getElementById('word3'),
+    document.getElementById('word4')
+  ];
 
-      // === Game state ===
-      let guesses = [];           // array of strings (submitted)
-      let currentGuess = "";      // currently typing
-      let solved = [false,false,false,false];
-      let gameOver = false;
+  let ANSWERS = [];
+  let guesses = [];
+  let currentGuess = "";
+  let solved = [false, false, false, false];
+  let gameOver = false;
 
-      // Keyboard letter -> status ranking
-      // unknown < absent < present < correct
-      const keyStatus = {}; // { a: 'present' | 'correct' | 'absent' }
+  const keyStatus = {};
+  const KEY_RANK = { unknown: 0, absent: 1, present: 2, correct: 3 };
+  const QWERTY_ROWS = ["qwertyuiop", "asdfghjkl", "zxcvbnm"];
 
-      const KEY_RANK = { unknown: 0, absent: 1, present: 2, correct: 3 };
-      const QWERTY_ROWS = ["qwertyuiop","asdfghjkl","zxcvbnm"];
+  // === Utility ===
+  const el = (tag, cls, text) => {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
+  };
 
-      // === Utility ===
-      const el = (tag, cls, text) => {
-        const e = document.createElement(tag);
-        if (cls) e.className = cls;
-        if (text != null) e.textContent = text;
-        return e;
-      };
+  function setMessage(text, type = 'info') {
+    messageEl.textContent = text || '';
+    messageEl.className = type === 'error' ? 'msg error' : 'msg';
+  }
 
-      function setMessage(text, type='info'){
-        messageEl.textContent = text || '';
-        messageEl.className = type === 'error' ? 'msg error' : 'msg';
+  function updateGuessesLeft() {
+    guessesLeftEl.textContent = `Guesses left: ${MAX_GUESSES - guesses.length}`;
+  }
+
+  function normalize(s) { return (s || "").toLowerCase().replace(/[^a-z]/g, ''); }
+
+  function evaluate(guess, answer) {
+    const res = Array(WORD_LEN).fill('absent');
+    const a = answer.split('');
+    const g = guess.split('');
+    const counts = {};
+    for (const ch of a) counts[ch] = (counts[ch] || 0) + 1;
+
+    // First pass: correct
+    for (let i = 0; i < WORD_LEN; i++) {
+      if (g[i] === a[i]) {
+        res[i] = 'correct';
+        counts[g[i]]--;
       }
-
-      function updateGuessesLeft(){
-        guessesLeftEl.textContent = `Guesses left: ${MAX_GUESSES - guesses.length}`;
+    }
+    // Second pass: present
+    for (let i = 0; i < WORD_LEN; i++) {
+      if (res[i] === 'correct') continue;
+      const ch = g[i];
+      if (counts[ch] > 0) {
+        res[i] = 'present';
+        counts[ch]--;
       }
+    }
+    return res; // array of 'absent'|'present'|'correct'
+  }
 
-      function normalize(s){ return (s||"").toLowerCase().replace(/[^a-z]/g, ''); }
+  function promoteKey(letter, status) {
+    const prev = keyStatus[letter] || 'unknown';
+    if (KEY_RANK[status] > KEY_RANK[prev]) {
+      keyStatus[letter] = status;
+    }
+  }
 
-      // Wordle-style evaluation with letter counts
-      function evaluate(guess, answer){
-        const res = Array(WORD_LEN).fill('absent');
-        const a = answer.split('');
-        const g = guess.split('');
-        const counts = {};
-        for (const ch of a) counts[ch] = (counts[ch]||0)+1;
+  function updateKeyboardUI() {
+    // apply classes to keys
+    keyboardEl.querySelectorAll('.key[data-key]').forEach(k => {
+      const letter = k.dataset.key;
+      const st = keyStatus[letter] || 'unknown';
+      k.classList.remove('absent', 'present', 'correct');
+      if (st !== 'unknown') k.classList.add(st);
+    });
+  }
 
-        // First pass: correct
-        for (let i=0;i<WORD_LEN;i++){
-          if (g[i] === a[i]) {
-            res[i] = 'correct';
-            counts[g[i]]--;
+  function drawBoards() {
+    boardsEl.innerHTML = '';
+    ANSWERS.forEach((_, idx) => {
+      const board = el('div', 'board');
+      const title = el('h2', null, `Word ${idx + 1}`);
+      const solvedTag = el('span', 'badge', solved[idx] ? 'Solved' : 'Unsolved');
+      title.appendChild(solvedTag);
+      board.appendChild(title);
+
+      const grid = el('div', 'grid');
+      for (let r = 0; r < MAX_GUESSES; r++) {
+        const row = el('div', 'row');
+        const guess = guesses[r] || (r === guesses.length ? currentGuess : "");
+        for (let c = 0; c < WORD_LEN; c++) {
+          const t = el('div', 'tile');
+          const ch = guess[c] || '';
+          if (ch) t.classList.add('filled');
+          t.textContent = ch || '';
+          // Reveal coloring if this row is a submitted guess
+          if (guesses[r]) {
+            const evaln = evaluate(guesses[r], ANSWERS[idx]);
+            t.classList.add('reveal', evaln[c]);
           }
+          row.appendChild(t);
         }
-        // Second pass: present
-        for (let i=0;i<WORD_LEN;i++){
-          if (res[i] === 'correct') continue;
-          const ch = g[i];
-          if (counts[ch] > 0){
-            res[i] = 'present';
-            counts[ch]--;
-          }
-        }
-        return res; // array of 'absent'|'present'|'correct'
+        grid.appendChild(row);
       }
+      board.appendChild(grid);
+      boardsEl.appendChild(board);
+    });
+  }
 
-      function promoteKey(letter, status){
-        const prev = keyStatus[letter] || 'unknown';
-        if (KEY_RANK[status] > KEY_RANK[prev]){
-          keyStatus[letter] = status;
-        }
+  function drawKeyboard() {
+    keyboardEl.innerHTML = '';
+    QWERTY_ROWS.forEach((row, idx) => {
+      const rowEl = el('div', 'krow');
+      if (idx === 2) {
+        // add Enter at start
+        rowEl.appendChild(makeKey('Enter', 'Enter', true));
       }
-
-      function updateKeyboardUI(){
-        // apply classes to keys
-        keyboardEl.querySelectorAll('.key[data-key]').forEach(k => {
-          const letter = k.dataset.key;
-          const st = keyStatus[letter] || 'unknown';
-          k.classList.remove('absent','present','correct');
-          if (st !== 'unknown') k.classList.add(st);
-        });
+      for (const ch of row) {
+        rowEl.appendChild(makeKey(ch, ch));
       }
-
-      function drawBoards(){
-        boardsEl.innerHTML = '';
-        ANSWERS.forEach((_, idx) => {
-          const board = el('div','board');
-          const title = el('h2', null, `Word ${idx+1}`);
-          const solvedTag = el('span', 'badge', solved[idx] ? 'Solved' : 'Unsovled');
-          solvedTag.textContent = solved[idx] ? 'Solved' : 'Unsolved';
-          title.appendChild(solvedTag);
-          board.appendChild(title);
-
-          const grid = el('div','grid');
-          for (let r=0; r<MAX_GUESSES; r++){
-            const row = el('div','row');
-            const guess = guesses[r] || (r===guesses.length ? currentGuess : "");
-            for (let c=0; c<WORD_LEN; c++){
-              const t = el('div','tile');
-              const ch = guess[c] || '';
-              if (ch) t.classList.add('filled');
-              t.textContent = ch || '';
-              // Reveal coloring if this row is a submitted guess
-              if (guesses[r]){
-                const evaln = evaluate(guesses[r], ANSWERS[idx]);
-                t.classList.add('reveal', evaln[c]);
-              }
-              row.appendChild(t);
-            }
-            grid.appendChild(row);
-          }
-          board.appendChild(grid);
-          boardsEl.appendChild(board);
-        });
+      if (idx === 2) {
+        rowEl.appendChild(makeKey('Backspace', '⌫', true));
       }
+      keyboardEl.appendChild(rowEl);
+    });
+    updateKeyboardUI();
+  }
 
-      function drawKeyboard(){
-        keyboardEl.innerHTML = '';
-        QWERTY_ROWS.forEach((row, idx) => {
-          const rowEl = el('div','krow');
-          if (idx === 2){
-            // add Enter at start
-            rowEl.appendChild(makeKey('Enter','Enter', true));
-          }
-          for (const ch of row){
-            rowEl.appendChild(makeKey(ch, ch));
-          }
-          if (idx === 2){
-            rowEl.appendChild(makeKey('Backspace','⌫', true));
-          }
-          keyboardEl.appendChild(rowEl);
-        });
-        updateKeyboardUI();
-      }
+  function makeKey(id, label, wide = false) {
+    const key = el('button', 'key' + (wide ? ' wide' : ''), label);
+    key.dataset.key = id.toLowerCase();
+    key.setAttribute('aria-label', id);
+    key.addEventListener('click', () => handleInput(id));
+    return key;
+  }
 
-      function makeKey(id, label, wide=false){
-        const key = el('button','key' + (wide?' wide':''), label);
-        key.dataset.key = id.toLowerCase();
-        key.setAttribute('aria-label', id);
-        key.addEventListener('click', () => handleInput(id));
-        return key;
-      }
+  function allSolved() {
+    return solved.every(Boolean);
+  }
 
-      function allSolved(){
-        return solved.every(Boolean);
-      }
+  function submitGuess() {
+    const guess = normalize(currentGuess);
+    if (gameOver) return;
+    if (guess.length !== WORD_LEN) return;
 
-      function submitGuess(){
-        const guess = normalize(currentGuess);
-        if (gameOver) return;
-        if (guess.length !== WORD_LEN){
-          setMessage('Need 5 letters.', 'error');
-          bounceActiveRow();
-          return;
-        }
-        // Accept any 5-letter guess (no dictionary gate)
-        guesses.push(guess);
+    const solvedFlags = solved.slice();
+    for (let i = 0; i < 4; i++) {
+      const status = evaluate(guess, ANSWERS[i]);
+      solvedFlags[i] = solvedFlags[i] || status.every(s => s === 'correct');
+    }
 
-        // Update solved flags and keyboard statuses
-        ANSWERS.forEach((ans, idx) => {
-          const result = evaluate(guess, ans);
-          if (result.every(x => x === 'correct')) solved[idx] = true;
-          // Promote keyboard keys
-          for (let i=0;i<WORD_LEN;i++){
-            promoteKey(guess[i], result[i]);
-          }
-        });
+    solved = solvedFlags;
+    guesses.push(guess);
+    currentGuess = '';
+    drawBoards();
+    drawKeyboard();
+    updateGuessesLeft();
 
-        currentGuess = '';
-        updateGuessesLeft();
-        drawBoards();
-        updateKeyboardUI();
+    if (allSolved()) {
+      setMessage('You solved all words!');
+      gameOver = true;
+    } else if (guesses.length >= MAX_GUESSES) {
+      setMessage('Out of guesses! Game over.');
+      gameOver = true;
+    }
+  }
 
-        if (allSolved()){
-          gameOver = true;
-          setMessage(`You solved all four in ${guesses.length}/${MAX_GUESSES}! 🎉`);
-          return;
-        }
-        if (guesses.length >= MAX_GUESSES){
-          gameOver = true;
-          const reveal = ANSWERS.map(w => w.toUpperCase()).join(' · ');
-          setMessage(`Out of guesses. Answers: ${reveal}`);
-          return;
-        }
-        setMessage('');
-      }
+  function handleInput(input) {
+    if (gameOver) return;
+    if (input === 'Enter') return submitGuess();
+    if (input === '⌫') return currentGuess = currentGuess.slice(0, -1);
+    if (currentGuess.length < WORD_LEN) {
+      currentGuess += input;
+    }
+    drawBoards();
+    drawKeyboard();
+  }
 
-      function bounceActiveRow(){
-        // subtle nudge on active row across all boards
-        document.querySelectorAll('.grid').forEach(grid => {
-          const row = grid.children[guesses.length];
-          if (!row) return;
-          row.animate([
-            { transform: 'translateX(0)' },
-            { transform: 'translateX(-4px)' },
-            { transform: 'translateX(4px)' },
-            { transform: 'translateX(0)' }
-          ], { duration: 120, iterations: 1 });
-        });
-      }
-
-      function handleInput(input){
-        if (gameOver) return;
-
-        if (input === 'Enter'){
-          submitGuess();
-          return;
-        }
-        if (input === 'Backspace'){
-          currentGuess = currentGuess.slice(0, -1);
-          drawBoards();
-          return;
-        }
-        const ch = normalize(input);
-        if (/^[a-z]$/.test(ch)){
-          if (currentGuess.length < WORD_LEN){
-            currentGuess += ch;
-            drawBoards();
-          }
-        }
-      }
-
-      // Keyboard events
-      window.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' || e.key === 'Backspace'){
-          e.preventDefault();
-          handleInput(e.key);
-          return;
-        }
-        if (/^[a-zA-Z]$/.test(e.key)){
-          handleInput(e.key);
-        }
-      });
-
-      // Restart
-      newGameBtn.addEventListener('click', () => {
-        guesses = [];
-        currentGuess = '';
-        solved = [false,false,false,false];
-        gameOver = false;
-        for (const k of Object.keys(keyStatus)) delete keyStatus[k];
-        updateGuessesLeft();
-        setMessage('');
-        drawBoards();
-        drawKeyboard();
-      });
-
-      // Initial render
-      updateGuessesLeft();
+  // === Start Screen ===
+  wordForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const words = wordInputs.map(input => normalize(input.value));
+    if (words.length === 4 && words.every(word => word.length === WORD_LEN)) {
+      ANSWERS = words;
+      startScreenEl.style.display = 'none';
       drawBoards();
       drawKeyboard();
-      setMessage('Guess the four words in 9 tries.');
-    })();
+      setMessage('Game started!');
+    } else {
+      setMessage('Please enter valid 5-letter words!', 'error');
+    }
+  });
+
+  // === New Game ===
+  newGameBtn.addEventListener('click', () => {
+    solved = [false, false, false, false];
+    guesses = [];
+    currentGuess = '';
+    gameOver = false;
+    startScreenEl.style.display = 'flex';
+    messageEl.textContent = '';
+  });
+
+  // Initially, show the start screen
+  startScreenEl.style.display = 'flex';
+})();
   </script>
 </body>
 </html>
