@@ -410,17 +410,23 @@ button[type="submit"]:hover {
   }
 
   function handleInput(input) {
-    if (gameOver) return;
-    if (input === 'Enter') return submitGuess();
-    if (input === 'Backspace') {
-      currentGuess = currentGuess.slice(0, -1);
-      drawBoards();
-    if (currentGuess.length < WORD_LEN) {
-      currentGuess += input;
-    }
-    drawBoards();
-    drawKeyboard();
+  if (gameOver) return;
+
+  if (input === 'Enter') {
+    return submitGuess();
   }
+
+  if (input === 'Backspace') {
+    currentGuess = currentGuess.slice(0, -1);
+  } else if (/^[a-z]$/i.test(input)) {
+    if (currentGuess.length < WORD_LEN) {
+      currentGuess += input.toLowerCase();
+    }
+  }
+
+  drawBoards();
+  drawKeyboard();
+}
 
   // === Start Screen ===
   wordForm.addEventListener('submit', (e) => {
