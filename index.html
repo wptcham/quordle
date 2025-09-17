@@ -251,6 +251,7 @@ button[type="submit"]:hover {
   let guesses = [];
   let currentGuess = "";
   let solved = [false, false, false, false];
+  let solvedAtGuess = [null, null, null, null];
   let gameOver = false;
 
   const keyStatus = {};
@@ -333,15 +334,14 @@ button[type="submit"]:hover {
       const row = el('div', 'row');
 
       let guess = "";
-      // ⬇️ Freeze solved boards at the moment they were solved
-      if (!solved[idx]) {
-        guess = guesses[r] || (r === guesses.length ? currentGuess : "");
-      } else {
-        // Only show guesses that happened before or at solving
-        if (r < guesses.length) {
-          guess = guesses[r];
-        }
-      }
+if (!solved[idx]) {
+  guess = guesses[r] || (r === guesses.length ? currentGuess : "");
+} else {
+  // freeze at the point it was solved
+  if (r < solvedAtGuess[idx]) {
+    guess = guesses[r];
+  }
+}
 
       for (let c = 0; c < WORD_LEN; c++) {
         const t = el('div', 'tile');
@@ -406,7 +406,7 @@ function submitGuess() {
       const status = evaluate(guess, ANSWERS[i]);
       if (status.every(s => s === 'correct')) {
         solved[i] = true;
-        solvedSomething = true;
+        solvedAtGuess[i] = guesses.length;
       }
     }
   }
