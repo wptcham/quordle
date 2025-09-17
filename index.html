@@ -332,13 +332,15 @@ button[type="submit"]:hover {
     for (let r = 0; r < MAX_GUESSES; r++) {
       const row = el('div', 'row');
 
-      // ⬇️ Only show guesses if the word isn’t solved
       let guess = "";
+      // ⬇️ Freeze solved boards at the moment they were solved
       if (!solved[idx]) {
         guess = guesses[r] || (r === guesses.length ? currentGuess : "");
       } else {
-        // If solved, only show guesses up to the solving guess
-        if (guesses[r]) guess = guesses[r];
+        // Only show guesses that happened before or at solving
+        if (r < guesses.length) {
+          guess = guesses[r];
+        }
       }
 
       for (let c = 0; c < WORD_LEN; c++) {
@@ -347,7 +349,7 @@ button[type="submit"]:hover {
         if (ch) t.classList.add('filled');
         t.textContent = ch || '';
 
-        if (guesses[r]) {
+        if (guess && r < guesses.length) {
           const evaln = evaluate(guesses[r], ANSWERS[idx]);
           t.classList.add('reveal', evaln[c]);
         }
@@ -391,62 +393,28 @@ button[type="submit"]:hover {
     return solved.every(Boolean);
   }
 
- function submitGuess() {
-  const guess = normalize(currentGuess);
-  if (gameOver) return;
-  if (guess.length !== WORD_LEN) return;
-
-  const solvedFlags = solved.slice();
-  for (let i = 0; i < 4; i++) {
-    const status = evaluate(guess, ANSWERS[i]);
-    solvedFlags[i] = solvedFlags[i] || status.every(s => s === 'correct');
-  }
-
-  solved = solvedFlags;
-  guesses.push(guess);
-  currentGuess = '';
-  drawBoards();
-  drawKeyboard();
-  updateGuessesLeft();
-
-  if (allSolved()) {
-    setMessage('You solved all words!');
-    gameOver = true;
-  } else if (guesses.length >= MAX_GUESSES) {
-    setMessage('Out of guesses! Game over.');
-    gameOver = true;
-  }
-}
-✅ Fix: Don’t record guesses for solved boards
-We’ll add a check so that once a board is solved, it stops evaluating new guesses.
-
-js
-Copy code
 function submitGuess() {
   const guess = normalize(currentGuess);
   if (gameOver) return;
   if (guess.length !== WORD_LEN) return;
 
-  let anySolvedNow = false;
+  // Track if this guess solved anything
+  let solvedSomething = false;
 
   for (let i = 0; i < 4; i++) {
     if (!solved[i]) {
       const status = evaluate(guess, ANSWERS[i]);
       if (status.every(s => s === 'correct')) {
         solved[i] = true;
-        anySolvedNow = true;
+        solvedSomething = true;
       }
     }
   }
 
-  // Only store guess if it applied to at least one unsolved word
-  if (!anySolvedNow) {
-    guesses.push(guess);
-  } else {
-    guesses.push(guess); // optional: still show the solving guess
-  }
-
+  // Always record the guess (so unsolved boards still show it)
+  guesses.push(guess);
   currentGuess = '';
+
   drawBoards();
   drawKeyboard();
   updateGuessesLeft();
