@@ -189,10 +189,11 @@ button[type="submit"]:hover {
 }
 
 .board.solved {
-  opacity: 0.8;
+  opacity: 0.5;
   border: 2px solid var(--correct);
-  box-shadow: 0 0 15px rgba(34, 197, 94, 0.6); /* green glow */
+  box-shadow: 0 0 15px rgba(34, 197, 94, 0.6);
   transition: opacity 0.3s ease, box-shadow 0.3s ease, border 0.3s ease;
+  pointer-events: none; /* prevent interaction with solved boards */
 }
 
   </style>
@@ -331,7 +332,12 @@ button[type="submit"]:hover {
     boardsEl.innerHTML = '';
     ANSWERS.forEach((_, idx) => {
       const board = el('div', 'board');
-      if (solved[idx]) board.classList.add('solved');
+if (solved[idx]) {
+  board.classList.add('solved');
+} else {
+  board.classList.add('active-board'); // optional styling for unsolved
+}
+
 
       const title = el('h2', null, `Word ${idx + 1}`);
       const solvedTag = el('span', 'badge', solved[idx] ? 'Solved' : 'Unsolved');
