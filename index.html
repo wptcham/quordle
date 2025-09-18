@@ -297,11 +297,9 @@ button[type="submit"]:hover{
 
 <script>
 (() => {
-  // === Configuration ===
   const MAX_GUESSES = 9;
   const WORD_LEN = 5;
 
-  // === DOM refs ===
   const startScreenEl = document.getElementById('startScreen');
   const boardsEl = document.getElementById('boards');
   const keyboardEl = document.getElementById('keyboard');
@@ -327,7 +325,6 @@ button[type="submit"]:hover{
   const KEY_RANK = { unknown: 0, absent: 1, present: 2, correct: 3 };
   const QWERTY_ROWS = ["qwertyuiop", "asdfghjkl", "zxcvbnm"];
 
-  // === Utility ===
   const el = (tag, cls, text) => {
     const e = document.createElement(tag);
     if (cls) e.className = cls;
@@ -353,14 +350,12 @@ button[type="submit"]:hover{
     const counts = {};
     for (const ch of a) counts[ch] = (counts[ch] || 0) + 1;
 
-    // First pass: correct
     for (let i = 0; i < WORD_LEN; i++) {
       if (g[i] === a[i]) {
         res[i] = 'correct';
         counts[g[i]]--;
       }
     }
-    // Second pass: present
     for (let i = 0; i < WORD_LEN; i++) {
       if (res[i] === 'correct') continue;
       const ch = g[i];
@@ -369,7 +364,7 @@ button[type="submit"]:hover{
         counts[ch]--;
       }
     }
-    return res; // array of 'absent'|'present'|'correct'
+    return res;
   }
 
   function promoteKey(letter, status) {
@@ -388,7 +383,6 @@ button[type="submit"]:hover{
     });
   }
 
-  // === Draw boards with solved-board freeze fix ===
   function drawBoards() {
     boardsEl.innerHTML = '';
     ANSWERS.forEach((_, idx) => {
@@ -407,10 +401,10 @@ button[type="submit"]:hover{
         let guess = '';
 
         if (!solved[idx] || r <= solvedAtGuess[idx]) {
-          // Show guesses up to the solved row
+          // show guesses up to the solved guess row
           guess = guesses[r] || (r === guesses.length ? currentGuess : '');
         } else {
-          // Freeze at the solved guess
+          // freeze at the solved guess
           guess = guesses[solvedAtGuess[idx]];
         }
 
@@ -420,9 +414,9 @@ button[type="submit"]:hover{
           if (ch) t.classList.add('filled');
           t.textContent = ch || '';
 
-          // Only evaluate guesses **up to the solved row**
-          if (r < guesses.length && (!solved[idx] || r <= solvedAtGuess[idx])) {
-            const evaln = evaluate(guesses[r], ANSWERS[idx]);
+          // evaluate only the guess displayed for this row
+          if (guess) {
+            const evaln = evaluate(guess, ANSWERS[idx]);
             t.classList.add('reveal', evaln[c]);
           }
 
@@ -463,16 +457,14 @@ button[type="submit"]:hover{
 
   function submitGuess() {
     const guess = normalize(currentGuess);
-    if (gameOver) return;
-    if (guess.length !== WORD_LEN) return;
+    if (gameOver || guess.length !== WORD_LEN) return;
 
-    // Track if this guess solved anything
     for (let i = 0; i < 4; i++) {
       if (!solved[i]) {
         const status = evaluate(guess, ANSWERS[i]);
         if (status.every(s => s === 'correct')) {
           solved[i] = true;
-          solvedAtGuess[i] = guesses.length; // store index of solved guess
+          solvedAtGuess[i] = guesses.length;
         }
       }
     }
@@ -506,12 +498,10 @@ button[type="submit"]:hover{
     drawKeyboard();
   }
 
-  // === Start Screen ===
   wordForm.addEventListener('submit', (e) => {
     e.preventDefault();
     const words = wordInputs.map(input => normalize(input.value));
-
-    if (words.length === 4 && words.every(word => word.length === WORD_LEN)) {
+    if (words.length === 4 && words.every(w => w.length === WORD_LEN)) {
       ANSWERS = words;
       solved = [false, false, false, false];
       solvedAtGuess = [null, null, null, null];
@@ -519,19 +509,16 @@ button[type="submit"]:hover{
       currentGuess = '';
       gameOver = false;
       Object.keys(keyStatus).forEach(k => delete keyStatus[k]);
-
       startScreenEl.style.display = 'none';
-      messageEl.textContent = '';
+      setMessage('Game started!');
       updateGuessesLeft();
       drawBoards();
       drawKeyboard();
-      setMessage('Game started!');
     } else {
       setMessage('Please enter valid 5-letter words!', 'error');
     }
   });
 
-  // === New Game ===
   newGameBtn.addEventListener('click', () => {
     solved = [false, false, false, false];
     solvedAtGuess = [null, null, null, null];
@@ -542,17 +529,16 @@ button[type="submit"]:hover{
     messageEl.textContent = '';
   });
 
-  // === Physical Keyboard Support ===
   document.addEventListener('keydown', (e) => {
     if (/^[a-zA-Z]$/.test(e.key)) handleInput(e.key.toLowerCase());
     if (e.key === 'Enter') handleInput('Enter');
     if (e.key === 'Backspace') handleInput('Backspace');
   });
 
-  // Initially, show the start screen
   startScreenEl.style.display = 'flex';
 })();
 </script>
+
 
 </body>
 </html>
