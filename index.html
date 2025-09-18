@@ -22,6 +22,17 @@
   header h1{ margin:0; font-weight:800; letter-spacing:.5px; font-size:clamp(20px,2.8vw,28px); }
   .sub{ color: var(--muted); font-size:14px; }
   .boards{ display:grid; gap:16px; grid-template-columns:repeat(4,1fr); }
+  /* For medium screens */
+@media (max-width: 900px){
+  .boards{
+    grid-template-columns: repeat(2, 1fr); /* 2 columns */
+  }
+/* For small screens (mobile) */
+@media (max-width: 560px){
+  .boards{
+    grid-template-columns: repeat(2, 1fr); /* still 2 columns */
+    gap: 12px; /* optional: reduce gap for smaller screens */
+  }
   .board{
     background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,0));
     border:1px solid var(--tile-border); border-radius:var(--radius); padding:12px; box-shadow:var(--shadow);
