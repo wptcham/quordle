@@ -388,7 +388,7 @@ button[type="submit"]:hover{
     });
   }
 
-  // === Draw boards with correct handling for solved boards ===
+  // === Draw boards with solved-board freeze fix ===
   function drawBoards() {
     boardsEl.innerHTML = '';
     ANSWERS.forEach((_, idx) => {
@@ -420,8 +420,8 @@ button[type="submit"]:hover{
           if (ch) t.classList.add('filled');
           t.textContent = ch || '';
 
-          // Only show reveal colors for actual submitted guesses
-          if (guess && r < guesses.length) {
+          // Only evaluate guesses **up to the solved row**
+          if (r < guesses.length && (!solved[idx] || r <= solvedAtGuess[idx])) {
             const evaln = evaluate(guesses[r], ANSWERS[idx]);
             t.classList.add('reveal', evaln[c]);
           }
@@ -553,5 +553,6 @@ button[type="submit"]:hover{
   startScreenEl.style.display = 'flex';
 })();
 </script>
+
 </body>
 </html>
